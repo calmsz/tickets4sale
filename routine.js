@@ -1,7 +1,7 @@
 var fs = require('fs');
 var moment = require('moment');
 
-(function(){
+(function() {
 
     let helpText = `Example: routine.js 2017-01-01 2017-02-02
          Where 2017-01-01 is queryDate and 2017-02-02 is showDate`;
@@ -20,7 +20,7 @@ var moment = require('moment');
         let output = [];
         let name;
         let date;
-        let gender;
+        let genre;
         let status;
         let daysBetween;
         let tleft;
@@ -29,6 +29,9 @@ var moment = require('moment');
         let dateSmallHall;
         let dateSale;
         let inventory;
+        let finalOutput = [];
+        let genrePivot;
+        let showList = [];
 
         fs.readFile('data/shows.csv', 'utf8', function(err, contents) {
         
@@ -40,7 +43,7 @@ var moment = require('moment');
                         .trim()                 // remove white spaces
                         .replace(/,$/g,'')      // remove the last comma
                         .replace(/\"/g,'');     // remove doublequotes
-                gender = r.split(date)[1]       // at the right side of date is the gender
+                genre = r.split(date)[1]       // at the right side of date is the genre
                           .trim()               // remove white spaces
                           .replace(/^,/g,'')    // remove previous comma
                           .replace(/\"/g,'');   // remove double quotes
@@ -92,11 +95,36 @@ var moment = require('moment');
                 if (status === sold_out) { // this should be refactored I know :)
                     tleft = 0;
                 }
-                
-                output.push({name, gender, status, tleft, tavailable});
-            }            
-            inventory = JSON.stringify({"inventory": output});
+
+                output.push({name, genre, status, tleft, tavailable});
+            }
         });
+
+
+        sortGenre(output);
+            
+        genrePivot = output[0].genre;
+        console.log("pivot->",genrePivot);
+        output.map(function(o) {
+            if (o.genre === genrePivot) {
+                showList.push({"title":o.name, 
+                "tickets left": o.tleft, 
+                "tickets available": o.tavailable, 
+                "status": o.status });
+            } else {
+                finalOutput.push({"genre": genrePivot, "shows": showList});
+                showList = [];
+                genrePivot = o.genre;
+                showList.push({"title":o.name, 
+                "tickets left": o.tleft, 
+                "tickets available": o.tavailable, 
+                "status": o.status });
+            }
+        });
+        finalOutput.push({"genre": genrePivot, "shows": showList});
+        inventory = JSON.stringify({"inventory": finalOutput});
+
+
         fs.writeFile('data/storage.json', inventory, (err) => {
             if (err) throw err;
             console.log('The file data/storage.json has been saved!');
@@ -116,6 +144,22 @@ var moment = require('moment');
             status = in_the_past;
         }
         return status;
+    }
+
+    function sortGenre(output) {
+        // sort by genre
+        output.sort(function(a, b) {
+            var genreA = a.genre.toUpperCase(); // ignore upper and lowercase
+            var genreB = b.genre.toUpperCase(); // ignore upper and lowercase
+            if (genreA < genreB) {
+            return -1;
+            }
+            if (genreA > genreB) {
+            return 1;
+            }    
+            // names must be equal
+            return 0;
+        });        
     }
 
 })();
