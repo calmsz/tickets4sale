@@ -3,13 +3,17 @@ var moment = require('moment');
 
 (function() {
 
-    let helpText = `Example: routine.js 2017-01-01 2017-02-02
+    let helpText = `Example: node routine.js 2017-01-01 2017-02-02
          Where 2017-01-01 is queryDate and 2017-02-02 is showDate`;
 
       if ((['h', '-h', '--h', 'help', '-help', '--help'].indexOf(process.argv[2]) !== -1) || 
-          (process.argv.length <= 2)) {
+          (process.argv.length <= 3)) {
           console.log(helpText);
           return true;
+      } else if ((!process.argv[3].match(/\d{4}-\d{2}-\d{2}/g)) || 
+                (!process.argv[2].match(/\d{4}-\d{2}-\d{2}/g))){
+          console.log('invalid date');
+          return;
       }
         const open_for_sale = "Open for sale";
         const sale_not_started = "Sale not started";
@@ -33,6 +37,8 @@ var moment = require('moment');
         let genrePivot;
         let showList = [];
 
+
+            
         fs.readFile('data/shows.csv', 'utf8', function(err, contents) {
         
         const shows = contents.split('\r\n');
@@ -102,9 +108,14 @@ var moment = require('moment');
 
 
         sortGenre(output);
-            
+        
+        if (output.length < 1) {
+            console.log('No shows for those dates.');
+            return;
+        }
+
         genrePivot = output[0].genre;
-        console.log("pivot->",genrePivot);
+        
         output.map(function(o) {
             if (o.genre === genrePivot) {
                 showList.push({"title":o.name, 
