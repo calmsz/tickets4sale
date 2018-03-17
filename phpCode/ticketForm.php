@@ -11,14 +11,32 @@ use Carbon\Carbon;
     <script
         src="https://code.jquery.com/jquery-1.12.4.js"
         crossorigin="anonymous"></script>
-
-    <script
-        src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"
-        crossorigin="anonymous"></script>
-
+        
     <title>Ticket Form</title>
+    <style>
+.intro th { 
+    background-color: lightgray;
+    padding: 2px;
+    text-align: left;
+    width: 100%;
+}
+th, td {
+    border-bottom: 1px solid #ddd;
+}
+    </style>
 </head>
 <body>
+    <?php
+        if (count($_POST) > 0) {
+            include 'showInventory.php';            
+            
+            $queryDate = Carbon::now('Europe/London')->format('Y-m-d');
+            $inventory = new showInventory;
+            $inventory->load(['', '../data/shows.csv', $queryDate, $_POST['showDate']])
+                ->getShowsAtDate()
+                ->parseOutputObject();
+        }
+    ?>
     <form method="post">
         <label for="showDate">Show Date (yyyy-mm-dd):</label>
         <input type="text" name="showDate" id="showDate">
@@ -26,28 +44,50 @@ use Carbon\Carbon;
         <input type="submit" value="Submit">
     </form>
     
-    <?php
-        if (count($_POST) > 0) {
-            include 'showInventory.php';            
-            
-            
-            $inventory = new showInventory;
-            $inventory->load(['', '../data/shows.csv', '2018-06-02', $_POST['showDate']])
-                ->getShowsAtDate()
-                ->parseOutputObject()
-                ->printJsonInventory();
-        }
-    ?>
+    <h3> Results <?php echo  $_POST['showDate']; ?>
+    </h3>
 
+
+    <div id="genres">
+
+    </div>
 
 </body>
 
 <script language="javascript">
-<?php
-echo "var dataSet = new Array(".$inventory->getArrayGenres().");";
- ?>
-console.log(dataSet);
 
+<?php
+    echo "const dataSet = new Array(".$inventory->getArrayGenres().");";
+ ?>
+ 
+let domParent = $("#genres");
+let genres = dataSet[0];
+
+genres.forEach(element => {
+    let shows = element.shows;
+    domParent.html(domParent.html() + `<div id='${element.genre}'>`);
+    domParent.html(domParent.html() + `<H3>${element.genre}</H3>`);
+        shows.forEach(showie => {
+            domParent.html(domParent.html() + `
+        <table class='intro'>
+        <tr>
+        <th>Title</th>
+        <th>Tickets Left</th>
+        <th>Tickets Available</th>
+        <th>Status</th>
+        <th>Price</th>
+        </tr>
+        <tr>
+        <td>${showie.title}</td>
+        <td>${showie['tickets left']}</td>
+        <td>${showie['tickets available']}</td>
+        <td>${showie['status']}</td>
+        <td>${showie['price']}</td>
+        </tr>
+        </table>`);    
+        });  
+    domParent.html(domParent.html() + `</div>`);
+});
 </script>
 
 </html>

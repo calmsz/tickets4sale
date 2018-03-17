@@ -7,6 +7,9 @@ const OPEN_FOR_SALE = "Open for sale";
 const SALE_NOT_STARTED = "Sale not started";
 const SOLD_OUT = "Sold out";
 const IN_THE_PAST = "In the past";
+const PRICE_COMEDY = 50;
+const PRICE_DRAMA = 40;
+const PRICE_MUSICAL = 70;
 
 class showInventory 
 {
@@ -105,42 +108,55 @@ class showInventory
         $this->showsAtparamShowDate = [];
 
         $setTicketsAndStatus = function($s){
+            if ($s['genre']=="COMEDY") {
+                $price = PRICE_COMEDY;
+            } elseif ($s['genre']=="MUSICAL") {
+                $price = PRICE_MUSICAL;
+            } else {
+                $price = PRICE_DRAMA;
+            }
+            
             if ($s['dateBigHall'] == $this->paramShowDate) {
-                if ($s['dateBigHall']->diffInDays($this->paramQueryDate) > 0) {
-                    $daysBetween = $s['dateBigHall']->diffInDays($this->paramQueryDate);
+                if ($s['dateBigHall']->diffInDays($this->paramQueryDate, false) < 0) {
+                    $daysBetween = $s['dateBigHall']->diffInDays($this->paramQueryDate, false);
                     $s['status'] = $this->getStatus($daysBetween);
                     if ($s['status'] === OPEN_FOR_SALE) {
-                        $s['tleft'] = ($daysBetween - 5) * 10;
+                        $s['tleft'] = (abs($daysBetween) - 5) * 10;
                         $s['tavailable'] = ($s['tleft'] < 200) ? 10 : 0;
                     } else {
                         $s['tleft'] = 200;
                         $s['tavailable'] = 0;
                     }
-                } elseif ($s['dateSmallHall']->diffInDays($this->paramQueryDate) > 0) {
-                    $daysBetween = $s['dateSmallHall']->diffInDays($this->paramQueryDate);
+                    $s['price'] = $price;
+                } elseif ($s['dateSmallHall']->diffInDays($this->paramQueryDate, false) < 0) {
+                    $daysBetween = $s['dateSmallHall']->diffInDays($this->paramQueryDate, false);
                     $s['status'] = $this->getStatus($daysBetween);
                     if ($s['status'] === OPEN_FOR_SALE) {
-                        $s['tleft'] = ($daysBetween - 5) * 5;
+                        $s['tleft'] = (abs($daysBetween) - 5) * 5;
                         $s['tavailable'] = ($s['tleft'] < 100) ? 5 : 0;
                     } else {
                         $s['tleft'] = 100;
                         $s['tavailable'] = 0;
                     }
-                } elseif ($s['dateSale']->diffInDays($this->paramQueryDate) > 0) {
-                    $daysBetween = $s['dateSale']->diffInDays($this->paramQueryDate);
+                    $s['price'] = $price;
+                } elseif ($s['dateSale']->diffInDays($this->paramQueryDate, false) < 0) {
+                    $daysBetween = $s['dateSale']->diffInDays($this->paramQueryDate, false);
                     $s['status'] = $this->getStatus($daysBetween);
                     if ($s['status'] === OPEN_FOR_SALE) {
-                        $s['tleft'] = ($daysBetween - 5) * 5;
+                        $s['tleft'] = (abs($daysBetween) - 5) * 5;
                         $s['tavailable'] = ($s['tleft'] < 100) ? 5 : 0;
                     } else {
                         $s['tleft'] = 100;
-                        $s['tavailable'] = 0;
+                        $s['tavailable'] = 0;                        
                     }
+                    $s['price'] = $price * 0.8;
                 }else {
-                    $daysBetween = $s['dateSale']->diffInDays($this->paramQueryDate);
+                    $daysBetween = $s['dateSale']->diffInDays($this->paramQueryDate, false);
                     $s['status'] = $this->getStatus($daysBetween);
-                        $s['tleftSale'] = 0;
+                        $s['tleft'] = 0;
                         $s['tavailable'] = 0;
+                        $s['price'] = $price;
+                        
                 }   
                 array_push($this->showsAtparamShowDate, $s);
             }
@@ -173,7 +189,8 @@ class showInventory
                     array_push($this->showList, Array("title" => $s['title'], 
                     "tickets left" => $s['tleft'], 
                     "tickets available" => $s['tavailable'], 
-                    "status" => $s['status']));
+                    "status" => $s['status'],
+                    "price" => $s['price']));
                 } else {
                     array_push($this->sortedFinalOutput, Array("genre" => $this->genrePivot, "shows" => $this->showList));                
                     $this->showList = [];
@@ -181,14 +198,15 @@ class showInventory
                     array_push($this->showList, Array("title" => $s['title'], 
                     "tickets left" => $s['tleft'], 
                     "tickets available" => $s['tavailable'], 
-                    "status" => $s['status']));
+                    "status" => $s['status'],
+                    "price" => $s['price']));
                 }
             };                
             array_map($parseOutputInformation, $this->showsAtparamShowDate);
             array_push($this->sortedFinalOutput, Array("genre" => $this->genrePivot, "shows" => $this->showList));                           
 
-            return $this;
         }
+        return $this;
     }
 
     
@@ -199,11 +217,11 @@ class showInventory
      */
     public function getStatus($daysBetween) {
         $status = "";
-        if ($daysBetween <= 25 && $daysBetween > 5) {
+        if ($daysBetween >= -25 && $daysBetween < -5) {
             $status = OPEN_FOR_SALE;    
-        } else if ($daysBetween > 25) {
+        } else if ($daysBetween < -25) {
             $status = SALE_NOT_STARTED;
-        } else if ($daysBetween <= 5 && $daysBetween > 0) {
+        } else if ($daysBetween >= -5 && $daysBetween < 0) {
             $status = SOLD_OUT;
         } else {
             $status = IN_THE_PAST;
@@ -219,7 +237,11 @@ class showInventory
      */
     public function printJsonInventory()
     {
-        echo json_encode(Array("inventory" => $this->sortedFinalOutput), JSON_PRETTY_PRINT);
+        if (count($this->sortedFinalOutput) > 0) {
+            echo json_encode(Array("inventory" => $this->sortedFinalOutput), JSON_PRETTY_PRINT);
+        } else {
+            echo "No shows for showDate=$this->paramShowDate and queryDate=$this->paramQueryDate";
+        }
 
         return true;
     }
