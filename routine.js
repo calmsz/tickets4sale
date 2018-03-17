@@ -168,7 +168,7 @@ var moment = require('moment');
             if (genreA > genreB) {
             return 1;
             }    
-            // names must be equal
+            
             return 0;
         });        
     }

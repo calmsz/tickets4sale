@@ -1,1 +1,55 @@
-{"inventory":[{"genre":"COMEDY","shows":[{"title":"COMEDY OF ERRORS","tickets left":10,"tickets available":10,"status":"Open for sale"},{"title":"HARLEQUINADE / ALL ON HER OWN (Double Bill)","tickets left":10,"tickets available":10,"status":"Open for sale"}]},{"genre":"DRAMA","shows":[{"title":"CARETAKER, THE","tickets left":10,"tickets available":10,"status":"Open for sale"}]},{"genre":"MUSICAL","shows":[{"title":"CATS","tickets left":10,"tickets available":10,"status":"Open for sale"},{"title":"COMMITMENTS, THE","tickets left":10,"tickets available":10,"status":"Open for sale"},{"title":"ELF THE MUSICAL","tickets left":10,"tickets available":10,"status":"Open for sale"}]}]}
+{
+    "inventory": [
+        {
+            "genre": "COMEDY",
+            "shows": [
+                {
+                    "title": "COMEDY OF ERRORS",
+                    "tickets left": 10,
+                    "tickets available": 10,
+                    "status": "Open for sale"
+                },
+                {
+                    "title": "HARLEQUINADE / ALL ON HER OWN (Double Bill)",
+                    "tickets left": 10,
+                    "tickets available": 10,
+                    "status": "Open for sale"
+                }
+            ]
+        },
+        {
+            "genre": "DRAMA",
+            "shows": [
+                {
+                    "title": "CARETAKER, THE",
+                    "tickets left": 10,
+                    "tickets available": 10,
+                    "status": "Open for sale"
+                }
+            ]
+        },
+        {
+            "genre": "MUSICAL",
+            "shows": [
+                {
+                    "title": "CATS",
+                    "tickets left": 10,
+                    "tickets available": 10,
+                    "status": "Open for sale"
+                },
+                {
+                    "title": "COMMITMENTS, THE",
+                    "tickets left": 10,
+                    "tickets available": 10,
+                    "status": "Open for sale"
+                },
+                {
+                    "title": "ELF THE MUSICAL",
+                    "tickets left": 10,
+                    "tickets available": 10,
+                    "status": "Open for sale"
+                }
+            ]
+        }
+    ]
+}
