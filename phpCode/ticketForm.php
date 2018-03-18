@@ -27,26 +27,23 @@ th, td {
 </head>
 <body>
     <?php
-        if (count($_POST) > 0) {
+        if (isset($_POST['showDate'])) {
             include 'showInventory.php';            
-            
+            $postDate = $_POST['showDate'];
             $queryDate = Carbon::now('Europe/London')->format('Y-m-d');
             $inventory = new showInventory;
-            $inventory->load(['', '../data/shows.csv', $queryDate, $_POST['showDate']])
+            $inventory->load(['', '../data/shows.csv', $queryDate, $postDate])
                 ->getShowsAtDate()
                 ->parseOutputObject();
-        }
-    ?>
+        echo "Show date: $postDate. ";
+        echo "Query date: $queryDate";
+        } ?>
     <form method="post">
         <label for="showDate">Show Date (yyyy-mm-dd):</label>
         <input type="text" name="showDate" id="showDate">
 
         <input type="submit" value="Submit">
     </form>
-    
-    <h3> Results <?php echo  $_POST['showDate']; ?>
-    </h3>
-
 
     <div id="genres">
 

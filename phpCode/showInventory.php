@@ -17,6 +17,9 @@ class showInventory
     private $fileName = "";
     private $paramQueryDate = "";
     private $paramShowDate = "";
+    private $paramShowDateMinus25 = "";
+    private $paramShowDateMinus5 = "";
+    private $paramDaysBetween = 0;
 
     private $showsAtparamShowDate = [];
     private $sortedFinalOutput = [];
@@ -44,6 +47,7 @@ class showInventory
                 $show['dateBigHall'] = Carbon::createFromFormat('Y-m-d', $output[0]);                
                 $show['dateSmallHall'] = Carbon::createFromFormat('Y-m-d', $output[0])->addDays(60);
                 $show['dateSale'] = Carbon::createFromFormat('Y-m-d', $output[0])->addDays(80);
+                $show['lastShow'] = Carbon::createFromFormat('Y-m-d', $output[0])->addDays(100);
                 preg_match('/\".*\"\,/', $s, $output);
                 $show['title'] = rtrim($output[0], '",');
                 $show['title'] = ltrim($show['title'], '"');
@@ -88,10 +92,20 @@ class showInventory
 
         try {
             $this->paramShowDate = Carbon::createFromFormat('Y-m-d', $arguments[3]);
+            $this->paramShowDateMinus25 = Carbon::createFromFormat('Y-m-d', $arguments[3])->subDays(25);
+            $this->paramShowDateMinus5 = Carbon::createFromFormat('Y-m-d', $arguments[3])->subDays(5);
         } catch (Exception $err) {
             echo "wrong show date: ";
             die($err->getMessage());
+        }        
+
+        try {
+            $this->paramDaysBetween = $this->paramShowDateMinus5->diffInDays($this->paramQueryDate);
+        } catch (Exception $err) {
+            echo "Problem calculating days between param dates: ";
+            die($err->getMessage());
         }
+        $this->status = $this->getStatus();
                 
         return true;
     }
@@ -116,51 +130,46 @@ class showInventory
                 $price = PRICE_DRAMA;
             }
             
-            if ($s['dateBigHall'] == $this->paramShowDate) {
-                if ($s['dateBigHall']->diffInDays($this->paramQueryDate, false) < 0) {
-                    $daysBetween = $s['dateBigHall']->diffInDays($this->paramQueryDate, false);
-                    $s['status'] = $this->getStatus($daysBetween);
-                    if ($s['status'] === OPEN_FOR_SALE) {
-                        $s['tleft'] = (abs($daysBetween) - 5) * 10;
-                        $s['tavailable'] = ($s['tleft'] < 200) ? 10 : 0;
-                    } else {
-                        $s['tleft'] = 200;
-                        $s['tavailable'] = 0;
+            if (($this->paramShowDate->greaterThanOrEqualTo($s['dateBigHall'])) &&
+                ($this->paramShowDate->lessThanOrEqualTo($s['lastShow']))) {
+                
+                    if ($this->paramShowDate->lessThan($s['dateSmallHall'])) {
+                        /**
+                         * 200 capacity, 10xd, price full
+                        */
+                        $capacity = 200;
+                        $ticketsPerDay = 10;                    
+                    } elseif (($this->paramShowDate->greaterThanOrEqualTo($s['dateSmallHall'])) &&
+                        ($this->paramShowDate->lessThan($s['dateSale']))) {
+                        /**
+                         * 100 capacity, 5xd, price full
+                         */
+                        $capacity = 100;
+                        $ticketsPerDay = 5;
+                    } elseif ($this->paramShowDate->greaterThanOrEqualTo($s['dateSale'])) {
+                        /**
+                         * 100 capacity, 5xd, 0.8 times price
+                         */
+                        $capacity = 100;
+                        $ticketsPerDay = 5;
+                        $price = $price * 0.8;
                     }
-                    $s['price'] = $price;
-                } elseif ($s['dateSmallHall']->diffInDays($this->paramQueryDate, false) < 0) {
-                    $daysBetween = $s['dateSmallHall']->diffInDays($this->paramQueryDate, false);
-                    $s['status'] = $this->getStatus($daysBetween);
-                    if ($s['status'] === OPEN_FOR_SALE) {
-                        $s['tleft'] = (abs($daysBetween) - 5) * 5;
-                        $s['tavailable'] = ($s['tleft'] < 100) ? 5 : 0;
-                    } else {
-                        $s['tleft'] = 100;
-                        $s['tavailable'] = 0;
-                    }
-                    $s['price'] = $price;
-                } elseif ($s['dateSale']->diffInDays($this->paramQueryDate, false) < 0) {
-                    $daysBetween = $s['dateSale']->diffInDays($this->paramQueryDate, false);
-                    $s['status'] = $this->getStatus($daysBetween);
-                    if ($s['status'] === OPEN_FOR_SALE) {
-                        $s['tleft'] = (abs($daysBetween) - 5) * 5;
-                        $s['tavailable'] = ($s['tleft'] < 100) ? 5 : 0;
-                    } else {
-                        $s['tleft'] = 100;
-                        $s['tavailable'] = 0;                        
-                    }
-                    $s['price'] = $price * 0.8;
-                }else {
-                    $daysBetween = $s['dateSale']->diffInDays($this->paramQueryDate, false);
-                    $s['status'] = $this->getStatus($daysBetween);
-                        $s['tleft'] = 0;
-                        $s['tavailable'] = 0;
-                        $s['price'] = $price;
-                        
-                }   
-                array_push($this->showsAtparamShowDate, $s);
-            }
 
+                    $s['status'] = $this->status;
+                    $s['price'] = $price;
+                    if ($s['status'] == OPEN_FOR_SALE) {
+                        $s['tleft'] = (($this->paramDaysBetween) * $ticketsPerDay) + $ticketsPerDay;
+                        $s['tavailable'] = ($s['tleft'] < $capacity) ? $ticketsPerDay : 0;                     
+                    } elseif ($s['status'] == SALE_NOT_STARTED) {
+                        $s['tleft'] = $capacity;
+                        $s['tavailable'] = 0;   
+                    } else {
+                        $s['tleft'] = 0;
+                        $s['tavailable'] = 0;   
+                    }
+
+                    array_push($this->showsAtparamShowDate, $s);
+            }
         };
 
         array_map($setTicketsAndStatus,$this->shows);
@@ -215,17 +224,21 @@ class showInventory
      * 
      * @return {string} with status.
      */
-    public function getStatus($daysBetween) {
+    public function getStatus() {
         $status = "";
-        if ($daysBetween >= -25 && $daysBetween < -5) {
-            $status = OPEN_FOR_SALE;    
-        } else if ($daysBetween < -25) {
+        if ($this->paramQueryDate->lessThan($this->paramShowDateMinus25)) {
             $status = SALE_NOT_STARTED;
-        } else if ($daysBetween >= -5 && $daysBetween < 0) {
+        } elseif ($this->paramQueryDate->greaterThanOrEqualTo($this->paramShowDateMinus25) &&
+            ($this->paramQueryDate->lessThan($this->paramShowDateMinus5))
+            ) {
+            $status = OPEN_FOR_SALE;    
+        } elseif ($this->paramQueryDate->greaterThanOrEqualTo($this->paramShowDateMinus5) &&
+            $this->paramQueryDate->lessThanOrEqualTo($this->paramShowDate)) {
             $status = SOLD_OUT;
-        } else {
+        } elseif ($this->paramQueryDate->greaterThan($this->paramShowDate)) {
             $status = IN_THE_PAST;
         }
+
         return $status;
     }
 
